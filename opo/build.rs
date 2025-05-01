@@ -6,8 +6,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_client(false)
         .build_server(true)
         .compile_protos(
-            &["opentelemetry-proto/opentelemetry/proto/collector/trace/v1/trace_service.proto"],
-            &["opentelemetry-proto/"],
+            &["../opentelemetry-proto/opentelemetry/proto/collector/trace/v1/trace_service.proto"],
+            &["../opentelemetry-proto/"],
         )?;
     Ok(())
 }
