@@ -111,7 +111,14 @@ allow_warnings = true
 c = "job:clippy-all" # comment this to have 'c' run clippy on only the default target
 
 [jobs.opo]
-command = ["cargo", "run", "--package", "opo"]
+command = ["cargo", "run", "--bin", "opo"]
+need_stdout = true
+background = false
+on_change_strategy = "kill_then_restart"
+
+
+[jobs.demo]
+command = ["cargo", "run", "--bin", "demo"]
 need_stdout = true
 background = false
 on_change_strategy = "kill_then_restart"

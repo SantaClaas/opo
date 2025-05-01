@@ -1,0 +1,17 @@
+[package]
+name = "demo"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = "0.8.4"
+opentelemetry = { version = "0.29.1", features = ["trace"] }
+opentelemetry-otlp = { version = "0.29.0", features = ["grpc-tonic", "tonic"] }
+opentelemetry-semantic-conventions = "0.29.0"
+opentelemetry-stdout = "0.29.0"
+opentelemetry_sdk = "0.29.0"
+tokio = { version = "1.44.2", features = ["full"] }
+tower-http = { version = "0.6.2", features = ["trace"] }
+tracing = "0.1.41"
+tracing-opentelemetry = "0.30.0"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
