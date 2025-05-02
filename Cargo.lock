@@ -907,6 +907,8 @@ dependencies = [
  "tonic 0.13.0",
  "tonic-build",
  "tower-http",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

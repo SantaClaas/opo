@@ -14,10 +14,16 @@ use opentelemetry::trace::TracerProvider as _;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .build()?;
+
     // Create a new OpenTelemetry trace pipeline that prints to stdout
     let provider = SdkTracerProvider::builder()
         .with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
+        .with_simple_exporter(exporter)
         .build();
+
     let tracer = provider.tracer("readme_example");
 
     // Create a tracing layer with the configured tracer
