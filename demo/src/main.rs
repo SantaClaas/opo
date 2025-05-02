@@ -2,9 +2,13 @@ use axum::{
     Router,
     routing::{get, post},
 };
-use opentelemetry::global;
+use opentelemetry::{KeyValue, global};
 use opentelemetry_otlp::{ExportConfig, WithExportConfig, WithTonicConfig};
-use opentelemetry_sdk::trace::{self, Sampler, SdkTracerProvider};
+use opentelemetry_sdk::{
+    Resource,
+    trace::{self, Sampler, SdkTracerProvider},
+};
+use opentelemetry_semantic_conventions::resource::{self};
 use std::{collections::HashMap, iter::Map, net::SocketAddr};
 use tower_http::trace::TraceLayer;
 use tracing::{error, span};
@@ -18,29 +22,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>
         .with_tonic()
         .build()?;
 
+    let service_data = Resource::builder()
+        .with_attribute(KeyValue::new(
+            resource::SERVICE_NAME,
+            env!("CARGO_PKG_NAME"),
+        ))
+        .with_attribute(KeyValue::new(
+            resource::SERVICE_VERSION,
+            env!("CARGO_PKG_VERSION"),
+        ))
+        .build();
+
     // Create a new OpenTelemetry trace pipeline that prints to stdout
     let provider = SdkTracerProvider::builder()
         .with_simple_exporter(opentelemetry_stdout::SpanExporter::default())
-        .with_simple_exporter(exporter)
+        .with_batch_exporter(exporter)
+        .with_resource(service_data)
         .build();
 
-    let tracer = provider.tracer("readme_example");
+    let tracer = provider.tracer("axum_demo");
 
-    // Create a tracing layer with the configured tracer
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+    let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
 
-    // Use the tracing subscriber `Registry`, or any other subscriber
-    // that impls `LookupSpan`
-    let subscriber = Registry::default().with(telemetry);
-
-    // Trace executed code
-    tracing::subscriber::with_default(subscriber, || {
-        // Spans will be sent to the configured OpenTelemetry exporter
-        let root = span!(tracing::Level::TRACE, "app_start", work_units = 2);
-        let _enter = root.enter();
-
-        error!("This event will be logged in the root span.");
-    });
+    tracing_subscriber::registry()
+        // .with(tracing_subscriber::EnvFilter::from_default_env())
+        // .with(tracing_subscriber::fmt::layer())
+        // .with(
+        //     tracing_subscriber::EnvFilter::try_from_default_env()
+        //         .unwrap_or_else(|_| format!("{}=trace", env!("CARGO_CRATE_NAME")).into()),
+        // )
+        .with(telemetry_layer)
+        .init();
 
     // Build the Axum app
     let app = Router::new()
@@ -52,7 +64,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>
             }),
         )
         .route("/work", post(|| async { "Work done!" }))
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http())
+        .layer(axum_tracing_opentelemetry::middleware::OtelAxumLayer::default());
 
     // Run the app
     let address = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -61,8 +74,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>
     let listener = tokio::net::TcpListener::bind(address).await?;
 
     axum::serve(listener, app).await?;
-    // Shutdown OpenTelemetry
-    // global::shutdown_tracer_provider();
 
     Ok(())
 }

@@ -1,10 +1,11 @@
 [package]
-name = "demo"
+name = "axum-otel-demo"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 axum = "0.8.4"
+axum-tracing-opentelemetry = "0.28.0"
 opentelemetry = { version = "0.29.1", features = ["trace"] }
 opentelemetry-otlp = { version = "0.29.0", features = ["grpc-tonic", "tonic"] }
 opentelemetry-semantic-conventions = "0.29.0"

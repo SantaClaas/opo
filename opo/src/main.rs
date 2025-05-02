@@ -15,7 +15,45 @@ impl TraceService for Service {
         &self,
         request: Request<ExportTraceServiceRequest>,
     ) -> Result<Response<ExportTraceServiceResponse>, Status> {
-        tracing::info!("Received request: {:#?}", request);
+        // tracing::info!("Received request: {:#?}", request);
+        let data = request.get_ref();
+        tracing::info!("Received {} spans", &data.resource_spans.len());
+        // tracing::info!("First span: {:#?}", &data.resource_spans.get(0));
+        for span in &data.resource_spans {
+            // tracing::info!("Span: {:#?}", span.resource);
+
+            let Some(resource) = &span.resource else {
+                continue;
+            };
+
+            let attributes: Vec<String> = resource
+                .attributes
+                .iter()
+                .map(|attribute| attribute.key.clone())
+                .collect();
+
+            for attribute in attributes {
+                if !attribute.starts_with("http") {
+                    continue;
+                }
+
+                tracing::info!("Attribute: {:?}", attribute);
+            }
+        }
+
+        data.resource_spans
+            .iter()
+            .flat_map(|span| span.scope_spans.clone())
+            .flat_map(|scope_span| scope_span.spans)
+            .flat_map(|span| span.attributes.clone())
+            .for_each(|attribute| {
+                //
+                if !attribute.key.starts_with("http") {
+                    return;
+                }
+                tracing::info!("Attribute 2: {:?}", attribute.key);
+            });
+
         Ok(Response::new(ExportTraceServiceResponse::default()))
     }
 }
@@ -25,11 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                format!(
-                    "{}=trace,tower_http=debug,bollard=debug",
-                    env!("CARGO_CRATE_NAME")
-                )
-                .into()
+                format!("{}=trace,tower_http=debug", env!("CARGO_CRATE_NAME")).into()
             }),
         )
         .with(tracing_subscriber::fmt::layer())
